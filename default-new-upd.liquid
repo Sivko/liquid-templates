@@ -1,42 +1,32 @@
-{% assign signedName = "" %}
-{% if object.custom_127279 == "Да" %}
-  {% assign signedName = "Голубов А. А. (по дов. 3 от 09.04.24)" %}
-{% else %}
-  {% assign signedName = "Орлов Д.Д." %}
-{% endif %}
+<%
+  date = invoice.upd_date.present? ? invoice.upd_date : invoice.issued_at
+  number = invoice.documents_number.present? ? invoice.documents_number : invoice.custom_number
+  amount_to_pay = invoice.amount_to_pay(invoice.positions)
+  positions = invoice.positions.ordered.eager_load(:product)
+  colspan_20 = 20
 
-{% if object.positions_with_ccd_exists? %}
-  {% assign colspan_20 = 20 %}
-{% else %}
-  {% assign colspan_20 = 0 %}
-{% endif %}
-
-<!-- Если вы пользуетесь коробочной версией, замените app.salesap.ru на свой домен -->
-<link href="https://app.salesap.ru/invoice_templates/style/delivery_note.css" rel="stylesheet">
+  payment_order_date = invoice.payment_order_date.present? ? invoice.payment_order_date : invoice.issued_at
+  shipping_date = invoice.shipping_date.present? ? invoice.shipping_date : invoice.issued_at
+%>
 
 <table class="unbreakable">
   <tr>
-    <td colspan=8 rowspan=4 class="text-top border-right">Универсальный передаточный документ</td>
+    <td colspan=8 rowspan=4 class="text-top border-right" style="width: 71px;">Универсальный передаточный документ</td>
     <td colspan=11 class="padding-left bigger">Счет-фактура №</td>
-    <td colspan=7 class="centered border-bottom">
-      {% if object.documents_number %} {{object.documents_number}} {% else %} {{object.custom_number}} {% endif %}
-    </td>
+    <td colspan=7 class="centered border-bottom"><%= number %></td>
     <td colspan=2 class="centered bigger">от</td>
-    <td colspan=10 class="centered border-bottom">
-      {% if object.upd_date != blank %}{{object.upd_date}}{% else %}{{object.issued_at | to_formatted_date: "%d.%m.%Y"}}{% endif %}
-    </td>
+    <td colspan=10 class="centered border-bottom"><%= l(date, format: :as_date) %></td>
     <td colspan=4>(1)</td>
-    <td colspan="{{ colspan_20 | plus: 45 }}" rowspan=3 class="text-top smaller text-right">
-      Приложение N 1<br>
-      к  постановлению Правительства РФ от 26.12.2011 N 1137<br>
-      (в редакции постановления Правительства РФ от 02.04.2021 N 534)
+    <td colspan=<%= 45 + colspan_20 %> rowspan=3 class="text-top smaller text-right">
+      Приложение № 1 к постановлению Правительства Российской Федерации от 26 декабря 2011 г. № 1137<br />
+      (в редакции постановления Правительства Российской Федерации от 16 августа 2024 г. № 1096)
     </td>
   </tr>
   <tr>
     <td colspan=11 class="padding-left bigger">Исправление №</td>
-    <td colspan=7 class="centered border-bottom"></td>
+    <td colspan=7 class="centered border-bottom">-</td>
     <td colspan=2 class="centered bigger">от</td>
-    <td colspan=10 class="centered border-bottom"></td>
+    <td colspan=10 class="centered border-bottom">-</td>
     <td colspan=4>(1а)</td>
   </tr>
   <tr>
@@ -44,31 +34,15 @@
   </tr>
   <tr>
     <td colspan=16 class="padding-left"><strong>Продавец</strong></td>
-    <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">{{object.org_detail.short_name}}</td>
+    <td colspan=<%= 60 + colspan_20 %> class="border-bottom"><%= invoice.org_detail&.short_name %></td>
     <td colspan=3 class="centered">(2)</td>
   </tr>
   <tr>
     <td colspan=4>Статус:</td>
-    <td colspan=2 class="bordered centered">{% if object.vat_kind == "without" %} 2 {% else %} 1 {% endif %}</td>
+    <td colspan=2 class="bordered centered"><%= invoice.vat_kind == "without" ? 2 : 1 %></td>
     <td colspan=2 class="border-right">&nbsp;</td>
     <td colspan=16 class="padding-left">Адрес</td>
-    <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">
-      {% assign org = object.org_detail %}
-      {% if org.juristic_zip_code %}
-        {%- if org.juristic_zip_code != blank -%}, {{org.juristic_zip_code}}{%- endif -%}
-        {%- if org.juristic_city != blank -%}, {{org.juristic_city}}{%- endif -%}
-        {%- if org.juristic_street != blank -%}, {{org.juristic_street}}{%- endif -%}
-        {%- if org.juristic_house != blank -%}, {{org.juristic_house}}{%- endif -%}
-        {%- if org.juristic_build != blank -%}, стр. {{org.juristic_build}}{%- endif -%}
-        {%- if org.juristic_office != blank -%}, {{org.juristic_office}}{%- endif -%}
-      {% elsif org.work_zipcode %}
-        {%- if org.work_zipcode != blank -%}, {{org.work_zipcode}}{%- endif -%}
-        {%- if org.work_city != blank -%}, {{org.work_city}}{%- endif -%}
-        {%- if org.work_street != blank -%}, {{org.work_street}}{%- endif -%}
-        {%- if org.work_building != blank -%}, {{org.work_building}}{%- endif -%}
-        {%- if org.work_apartment != blank -%}, {{org.work_apartment}}{%- endif -%}
-      {% endif %}
-    </td>
+    <td colspan=<%= 60 + colspan_20 %> class="border-bottom"><%= only_address(invoice.org_detail) %></td>
     <td colspan=3 class="centered">(2а)</td>
   </tr>
   <tr>
@@ -77,126 +51,75 @@
       2 - передаточный документ (акт)
     </td>
     <td colspan=16 class="padding-left">ИНН/КПП продавца</td>
-    <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">{{object.org_detail.inn}} / {{object.org_detail.kpp}}</td>
+    <td colspan=<%= 60 + colspan_20 %> class="border-bottom"><%= invoice.org_detail.decorate.inn_kpp_line if invoice.org_detail %></td>
     <td colspan=3 class="centered">(2б)</td>
   </tr>
   <tr>
     <td colspan=16 class="padding-left">Грузоотправитель и его адрес</td>
-    <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">он же</td>
+    <td colspan=<%= 60 + colspan_20 %> class="border-bottom">он же</td>
     <td colspan=3 class="centered">(3)</td>
   </tr>
   <tr>
     <td colspan=16 class="padding-left">Грузополучатель и его адрес</td>
-    <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">
-      {% if object.consignee %}
-        {% assign org = object.consignee %}
-        {% assign org_type = object.consignee_type %}
-      {% elsif object.payer %}
-        {% assign org = object.payer %}
-        {% assign org_type = object.payer_type %}
-      {% endif %}
-      {% if org_type == "Company" %}
-        {{org.short_name}}
-        {%- if org.inn != blank -%}, ИНН {{org.inn}}{%- endif -%}
-        {%- if org.kpp != blank -%}, КПП {{org.kpp}}{%- endif -%}
-        {%- if org.juristic_zip_code != blank -%}, {{org.juristic_zip_code}}{%- endif -%}
-        {%- if org.juristic_city != blank -%}, {{org.juristic_city}}{%- endif -%}
-        {%- if org.juristic_street != blank -%}, {{org.juristic_street}}{%- endif -%}
-        {%- if org.juristic_house != blank -%}, {{org.juristic_house}}{%- endif -%}
-        {%- if org.juristic_build != blank -%}, стр. {{org.juristic_build}}{%- endif -%}
-        {%- if org.juristic_office != blank -%}, оф. {{org.juristic_office}}{%- endif -%}
-      {% else %}
-        {{- org -}}
-      {% endif %}
-      {%- if org.general_phone != blank -%}, тел. {{org.general_phone}}{%- endif -%}
-    </td>
+    <td colspan=<%= 60 + colspan_20 %> class="border-bottom"><%= invoice_consignee_or_payer_info(invoice) %></td>
     <td colspan=3 class="centered">(4)</td>
   </tr>
   <tr>
     <td colspan=16 class="padding-left">К платежно-расчетному документу</td>
     <td colspan=2 class="centered">№</td>
-    <td colspan=8 class="border-bottom">{{object.payment_order_number}}</td>
+    <td colspan=8 class="border-bottom"><%= invoice.payment_order_number %></td>
     <td colspan=2 class="centered">от</td>
-    <td colspan="{{ colspan_20 | plus: 48 }}" class="border-bottom">
-      {% if object.payment_order_date != blank %}{{object.payment_order_date}}{% else %}{{object.issued_at  | to_formatted_date: "%d.%m.%Y"}} {% endif %}
-    </td>
+    <td colspan=<%= 48 + colspan_20 %> class="border-bottom"><%= l(payment_order_date, format: :as_date, default: nil) %></td>
     <td colspan=3 class="centered">(5)</td>
   </tr>
   <tr>
     <td colspan=16 class="padding-left">Документ об отгрузке № п/п</td>
-    <td colspan=8 class="border-bottom centered">УПД</td>
+    <td colspan=18 class="border-bottom">Универсальный передаточный документ</td>
     <td colspan=2 class="centered">№</td>
-    <td colspan=20 class="border-bottom">
-      {% if object.documents_number %} {{object.documents_number}} {% else %} {{object.custom_number}} {% endif %}
-    </td>
+    <td colspan=5 class="border-bottom"><%= number %></td>
     <td colspan=2 class="centered">от</td>
-    <td colspan="{{ colspan_20 | plus: 28 }}" class="border-bottom">
-      {% if object.shipping_date != blank %}{{object.shipping_date}}{% else %}{{object.issued_at  | to_formatted_date: "%d.%m.%Y"}} {% endif %}
-    </td>
+    <td colspan=<%= 33 + colspan_20 %> class="border-bottom"><%= l(shipping_date, format: :as_date, default: nil) %></td>
     <td colspan=3 class="centered">(5а)</td>
   </tr>
   <tr>
     <td colspan=16 class="padding-left"><strong>Покупатель</strong></td>
-    <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">
-      {% if object.payer.short_name %} {{object.payer.short_name}} {% else %} {{object.payer}} {% endif %}
+    <td colspan=<%= 60 + colspan_20 %> class="border-bottom">
+      <%= invoice.payer.try(:short_name).present? ? invoice.payer.short_name : invoice.payer.to_s %>
     </td>
     <td colspan=3 class="centered">(6)</td>
   </tr>
   <tr>
     <td colspan=16 class="padding-left">Адрес</td>
-    <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">
-      {% assign org = object.payer %}
-      {% if org.juristic_zip_code %}
-        {%- if org.juristic_zip_code != blank -%}, {{org.juristic_zip_code}}{%- endif -%}
-        {%- if org.juristic_city != blank -%}, {{org.juristic_city}}{%- endif -%}
-        {%- if org.juristic_street != blank -%}, {{org.juristic_street}}{%- endif -%}
-        {%- if org.juristic_house != blank -%}, {{org.juristic_house}}{%- endif -%}
-        {%- if org.juristic_build != blank -%}, стр. {{org.juristic_build}}{%- endif -%}
-        {%- if org.juristic_office != blank -%}, {{org.juristic_office}}{%- endif -%}
-      {% elsif org.work_zipcode %}
-        {%- if org.work_zipcode != blank -%}, {{org.work_zipcode}}{%- endif -%}
-        {%- if org.work_city != blank -%}, {{org.work_city}}{%- endif -%}
-        {%- if org.work_street != blank -%}, {{org.work_street}}{%- endif -%}
-        {%- if org.work_building != blank -%}, {{org.work_building}}{%- endif -%}
-        {%- if org.work_apartment != blank -%}, {{org.work_apartment}}{%- endif -%}
-      {% endif %}
-    </td>
+    <td colspan=<%= 60 + colspan_20 %> class="border-bottom"><%= only_address(invoice.payer) %></td>
     <td colspan=3 class="centered">(6а)</td>
   </tr>
   <tr>
     <td colspan=16 class="padding-left">ИНН/КПП покупателя</td>
-    <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">
-      {% if object.payer.kpp != blank %} {{object.payer.inn}} / {{object.payer.kpp}} {% endif %}
-    </td>
+    <td colspan=<%= 60 + colspan_20 %> class="border-bottom"><%= invoice.payer.decorate.inn_kpp_line if invoice.payer.is_a?(Company) %></td>
     <td colspan=3 class="centered">(6б)</td>
   </tr>
   <tr>
     <td colspan=16 class="padding-left">Валюта: наименование, код</td>
-    <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">Российский рубль, 643</td>
+    <td colspan=<%= 60 + colspan_20 %> class="border-bottom">Российский рубль, 643</td>
     <td colspan=3 class="centered">(7)</td>
   </tr>
   <tr>
     <td colspan=16 class="padding-left">
       Идентификатор государственного контракта, договора (соглашения) (при наличии)
     </td>
-    <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">&nbsp;</td>
+    <td colspan=<%= 60 + colspan_20 %> class="border-bottom">&nbsp;</td>
     <td colspan=3 class="centered">(8)</td>
   </tr>
   <tr style="height:6px">
     <td colspan=8 class="border-right"></td>
-    <td colspan="{{ colspan_20 | plus: 79 }}"></td>
+    <td colspan=<%= 79 + colspan_20 %>></td>
   </tr>
 </table>
 <table class="main-table">
   <thead>
   <tr>
-    <td colspan=2 rowspan=2>
-      № п/п
-    </td>
     <td colspan=6 rowspan=2>Код товара/ работ, услуг</td>
-    <td colspan=2 rowspan=2>
-      № п/п
-    </td>
+    <td colspan=2 rowspan=2>№ п/п</td>
     <td colspan=12 rowspan=2>
       Наименование товара (описание выполненных работ, оказанных услуг), имущественного права
     </td>
@@ -212,25 +135,21 @@
     <td colspan=6 rowspan=2>Сумма налога, предъяв-<br> ляемая покупателю</td>
     <td colspan=7 rowspan=2>Стоимость товаров <br>(работ, услуг), имущественных прав с налогом - всего</td>
     <td colspan=9>Страна происхождения товара</td>
-    <td colspan=8 rowspan=2>Регистрационный номер декларации на товары или регистрационный номер партии товара, подлежащего прослеживаемости </td>
-    {% if object.positions_with_ccd_exists? %}
-      <td colspan=9>Количественная единица измерения товара, используемая в целях осуществления прослеживаемости </td>
-      <td colspan=8 rowspan=2>Количество товара, подлежащего прослеживаемости, в количественной единице измерения товара, используемой в целях осуществления прослеживаемости </td>
-    {% endif %}
+    <td colspan=9 rowspan=2>Регистрационный номер декларации на товары или регистрационный номер партии товара, подлежащего прослеживаемости </td>
+    <td colspan=9>Количественная единица измерения товара, используемая в целях осуществления прослеживаемости </td>
+    <td colspan=8 rowspan=2>Количество товара, подлежащего прослеживаем- ости, в количе- ственной единице измерения товара, используемой в целях осуществления прослеживаемости </td>
+    <td colspan=7 rowspan=2>Стоимость товара, подлежащего прослеживаем ости, без налога на добавленную стоимость, в рублях </td>
   </tr>
   <tr>
-    <td colspan=2>код</td>
-    <td colspan=6>условное обозначение (националь-<br> ное)</td>
+    <td colspan=2>Код</td>
+    <td colspan=6>Условное обозначение (националь-<br> ное)</td>
     <td colspan=4>Цифро-<br> вой код</td>
     <td colspan=5>Краткое наименова-<br>ние</td>
-    {% if object.positions_with_ccd_exists? %}
-      <td colspan=4>код</td>
-      <td colspan=5>условное обозначение</td>
-    {% endif %}
+    <td colspan=2>Код</td>
+    <td colspan=7>Условное обозначение</td>
   </tr>
   <tr>
-    <td colspan=2>А</td>
-    <td colspan=6>Б</td>
+    <td colspan=6>А</td>
     <td colspan=2>1</td>
     <td colspan=12>1а</td>
     <td colspan=3>1б</td>
@@ -245,114 +164,92 @@
     <td colspan=7>9</td>
     <td colspan=4>10</td>
     <td colspan=5>10а</td>
-    <td colspan=8>11</td>
-    {% if object.positions_with_ccd_exists? %}
-      <td colspan=4>12</td>
-      <td colspan=5>12а</td>
-      <td colspan=8>13</td>
-    {% endif %}
+    <td colspan=9>11</td>
+    <td colspan=2>12</td>
+    <td colspan=7>12а</td>
+    <td colspan=8>13</td>
+    <td colspan=7>14</td>
   </tr>
   </thead>
   <tbody>
-  {% for position in object.positions %}
+
+  <%
+    positions.each_with_index do |position, i|
+      result_amount = position.result_amount.to_f
+      vat_sum = position.result_vat
+      sum_without_vat = result_amount - vat_sum&.to_f
+      price = sum_without_vat.to_f / position.quantity.to_f
+      is_observable = position.rnpt_number.present?
+  %>
     <tr>
-      <td colspan=2 class="centered">{{forloop.index}}</td>
-      <td colspan=6 class="centered" style="word-wrap: break-word;">
-        {% if position.code != blank %}{{position.code}}{% else %} - {% endif %}
-      </td>
-      <td colspan=2 class="centered">{{forloop.index}}</td>
-      <td colspan=12 style="overflow-wrap: anywhere">
-        {% if position.name != blank %}{{position.name}}{% else %}{{position.product}}{% endif %}
-      </td>
+      <td colspan=6 class="centered" style="word-wrap: break-word;"><%= position.code.present? ? position.code : '-' %></td>
+      <td colspan=2 class="centered"><%= i + 1 %></td>
+      <td colspan=12 style="overflow-wrap: anywhere"><%= position.name.presence || position.product&.name %></td>
       <td colspan=3 class="centered">-</td>
-      <td colspan=2 class="centered">
-        {% if position.unit != blank %} 796 {% else %} - {% endif %}
-      </td>
-      <td colspan=6 class="centered">
-        {% if position.unit != blank %}{{position.unit}}{% else %} - {% endif %}
-      </td>
-      <td colspan=4 class="centered">{{position.quantity | round: 2}}</td>
-      <td colspan=5 class="text-right">{{position.amount_without_vat_per_unit | to_formatted_number}}</td>
-      <td colspan=7 class="text-right">{{position.amount_without_vat | to_formatted_number}}</td>
+      <td colspan=2 class="centered"><%= position.unit.present? ? '796' : '-'  %></td>
+      <td colspan=6 class="centered"><%= position.unit.present? ? position.unit : '-' %></td>
+      <td colspan=4 class="centered"><%= number_with_precision(position.quantity, strip_insignificant_zeros: true) %></td>
+      <td colspan=5 class="text-right"><%= amount_to_currency(price) %></td>
+      <td colspan=7 class="text-right"><%= amount_to_currency(sum_without_vat) %></td>
       <td colspan=4 class="centered">-</td>
-      <td colspan=4 class="centered">{{position.vat_rate | round: 2}}</td>
-      <td colspan=6 class="text-right">
-        {% if position.result_vat > 0 %}
-          {{position.result_vat | to_formatted_number}}
-        {% elsif object.vat_rate > 0 %}
-          {{object.vat_rate}}
-        {% else %}
-          Без НДС
-        {% endif %}
-      </td>
-      <td colspan=7 class="text-right">{{position.result_amount | to_formatted_number}}</td>
-      <td colspan=4 class="centered">
-        {% if position.product.country_code != blank %} {{position.product.country_code}} {% else %} - {% endif %}
-      </td>
-      <td colspan=5 class="centered">
-        {% if position.product.country != blank %} {{position.product.country}} {% else %} - {% endif %}
-      </td>
-      <td colspan=8 class="centered">
-        {% if position.product.ccd != blank %} {{position.product.ccd}} {% else %} - {% endif %}
-      </td>
-      {% if object.positions_with_ccd_exists? %}
-        <td colspan=4 class="centered">{% if position.unit != blank %} 796 {% else %} - {% endif %}</td>
-        <td colspan=5 class="centered">{% if position.unit != blank %}{{position.unit}}{% else %} - {% endif %}</td>
-        <td colspan=8 class="centered">{{position.quantity | round: 2}}</td>
-      {% endif %}
+      <td colspan=4 class="centered"><%= number_to_human(position.vat_rate, precision: 2, strip_insignificant_zeros: true) %>%</td>
+      <td colspan=6 class="text-right"><%= vat_sum > 0 ? amount_to_currency(vat_sum) : invoice.vat_rate_val %></td>
+      <td colspan=7 class="text-right"><%= amount_to_currency(result_amount) %></td>
+      <td colspan=4 class="centered"><%= position.product&.country_code.presence || '-' %></td>
+      <td colspan=5 class="centered"><%= position.product&.country.presence || '-' %></td>
+      <td colspan=9 class="centered"><%= is_observable ? position.rnpt_number || '-' : '-' %></td>
+      <td colspan=2 class="centered"><%= is_observable ? position.product&.unit&.code || '-' : '-'  %></td>
+      <td colspan=7 class="centered"><%= is_observable ? position.product&.unit&.name || '-' : '-' %></td>
+      <td colspan=8 class="centered"><%= is_observable ? number_with_precision(position.quantity, strip_insignificant_zeros: true) : '-'%></td>
+      <td colspan=7 class="centered"><%= is_observable ? amount_to_currency(position.amount * position.quantity) : '-' %></td>
     </tr>
-  {% endfor %}
+  <% end %>
   <tr class="unbreakable-after">
-    <td colspan=2>&nbsp;</td>
     <td colspan=6>&nbsp;</td>
-    <td colspan=34><strong>Всего к оплате</strong></td>
-    <td colspan=7 class="text-right">{{object.amount_without_vat | to_formatted_number}}</td>
+    <td colspan=2>&nbsp;</td>
+    <td colspan=32><strong>Всего к оплате</strong></td>
+    <td colspan=7 class="text-right"><%= amount_to_currency(invoice.amount_without_vat) %></td>
     <td colspan=8 class="centered">Х</td>
-    <td colspan=6 class="text-right">{{object.result_vat | to_formatted_number}}</td>
-    <td colspan=7 class="text-right">{{object.amount_to_pay | to_formatted_number}}</td>
+    <td colspan=6 class="text-right"><%= amount_to_currency(invoice.result_vat) %></td>
+    <td colspan=7 class="text-right"><%= amount_to_currency(amount_to_pay) %></td>
     <td colspan=4>&nbsp;</td>
     <td colspan=5>&nbsp;</td>
+    <td colspan=9>&nbsp;</td>
+    <td colspan=2>&nbsp;</td>
+    <td colspan=7>&nbsp;</td>
     <td colspan=8>&nbsp;</td>
-    {% if object.positions_with_ccd_exists? %}
-      <td colspan=4>&nbsp;</td>
-      <td colspan=5>&nbsp;</td>
-      <td colspan=8>&nbsp;</td>
-    {% endif %}
+    <td colspan=7>&nbsp;</td>
   </tr>
   </tbody>
 </table>
 <div class="unbreakable">
   <table class="unbreakable table-condensed">
     <tr>
-      <td colspan=8 class="border-right" style="height:4px"></td>
-      <td colspan="{{ colspan_20 | plus: 79 }}"></td>
+      <td colspan=8 class="border-right" style="height:4px;width: 73px;"></td>
+      <td colspan=<%= 79 + colspan_20 %>></td>
     </tr>
     <tr>
       <td colspan=8 class="border-right">Документ составлен на<span> </span></td>
       <td>&nbsp;</td>
       <td colspan=16>Руководитель организации <br> или иное уполномоченное лицо</td>
       <td colspan=6 class="centered">
-        {% if object.org_detail.signature_manager_url and object.with_stamp and object.org_detail.kpp != blank %}
-          <img src="{{object.org_detail.signature_manager_url}}">
-        {% endif %}
+        <% if invoice.org_detail&.signature_manager_url.present? && invoice.with_stamp && invoice.org_detail.kpp.present? %>
+          <%= image_tag invoice.org_detail&.signature_manager_url.gsub('https', 'http')  %>
+        <% end %>
       </td>
       <td></td>
       <td colspan=15 class="centered">
-        {% if object.org_detail and object.org_detail.kpp != blank %}
-          {{ signedName }}
-        {% endif %}
+        <%= initialize_name(invoice.org_detail&.manager_name) if invoice.org_detail && invoice.org_detail.kpp.present? %>
       </td>
       <td colspan=16 class="collapsed">Главный бухгалтер <br> или иное уполномоченное лицо</td>
       <td colspan=6 class="centered">
-        {% if object.org_detail.signature_accountant_url and object.with_stamp and object.org_detail.kpp != blank %}
-          <img src="{{object.org_detail.signature_accountant_url}}">
-        {% endif %}
+        <% if invoice.org_detail&.signature_accountant_url.present? && invoice.with_stamp && invoice.org_detail.kpp.present? %>
+          <%= image_tag invoice.org_detail&.signature_accountant_url.gsub('https', 'http') %>
+        <% end %>
       </td>
       <td></td>
       <td colspan=15 class="centered">
-        {% if object.org_detail and object.org_detail.kpp != blank %}
-          {{ signedName }}
-        {% endif %}
+        <%= initialize_name(invoice.org_detail&.accountant) if invoice.org_detail && invoice.org_detail.kpp.present? %>
       </td>
     </tr>
     <tr>
@@ -373,21 +270,17 @@
       <td>&nbsp;</td>
       <td colspan=16>Индивидуальный предприниматель</td>
       <td colspan=6>
-        {% if object.org_detail.signature_manager_url and object.with_stamp and object.org_detail.kpp == empty and object.custom_127297 != "Нет" %}
-          <img src="{{object.org_detail.signature_manager_url}}">
-        {% endif %}
+        <% if invoice.org_detail&.signature_manager_url.present? && invoice.with_stamp && invoice.org_detail.kpp.blank? %>
+          <%= image_tag invoice.org_detail&.signature_manager_url.gsub('https', 'http')  %>
+        <% end %>
       </td>
       <td></td>
       <td colspan=15 class="centered">
-        {% if object.org_detail and object.org_detail.kpp == empty %}
-          {{ signedName }}
-        {% endif %}
+        <%= initialize_name(invoice.org_detail&.manager_name) if invoice.org_detail && invoice.org_detail.kpp.blank? %>
       </td>
       <td colspan=3></td>
       <td colspan=35 class="centered">
-        {% if object.org_detail and object.org_detail.kpp == empty %}
-          {{object.org_detail.certificate}}
-        {% endif %}
+        <%= invoice.org_detail&.certificate if invoice.org_detail && invoice.org_detail.kpp.blank? %>
       </td>
     </tr>
     <tr>
@@ -408,7 +301,7 @@
   <table class="unbreakable table-condensed">
     <tr>
       <td colspan=22 style="height:20px">Основание передачи (сдачи) / получения (приемки)</td>
-      <td colspan=60>{{ object.reason }}</td>
+      <td colspan=60><%= invoice.reason %></td>
       <td colspan=3>[8]</td>
     </tr>
     <tr>
@@ -437,18 +330,16 @@
       <td colspan=42>Товар (груз) получил / услуги, результаты работ, права принял</td>
     </tr>
     <tr>
-      <td colspan=13 class="centered">{{ object.org_detail.manager_position }}</td>
+      <td colspan=13 class="centered"><%= invoice.org_detail&.manager_position %></td>
       <td></td>
       <td colspan=10 class="centered collapsed">
-        {% if object.org_detail.signature_manager_url and object.with_stamp and object.custom_127297 != "Нет" %}
-          <img src="{{object.org_detail.signature_manager_url}}">
-        {% endif %}
+        <% if invoice.org_detail&.signature_manager_url.present? && invoice.with_stamp %>
+          <%= image_tag invoice.org_detail&.signature_manager_url.gsub('https', 'http')  %>
+        <% end %>
       </td>
       <td></td>
       <td colspan=14 class="centered">
-        {% if object.org_detail %}
-          {{ signedName }}
-        {% endif %}
+        <%= initialize_name(invoice.org_detail&.manager_name) if invoice.org_detail %>
       </td>
       <td colspan=3 class="border-right">[10]</td>
       <td>&nbsp;</td>
@@ -475,18 +366,13 @@
       <td colspan=3></td>
     </tr>
     <tr>
-      {% if object.shipping_date != blank %}
-        {% assign shipping_date_parts = object.shipping_date | to_formatted_date: "%d %B %y" | split: " " %}
-      {% else %}
-        {% assign shipping_date_parts = object.issued_at | to_formatted_date: "%d %B %y" | split: " " %}
-      {% endif %}
       <td colspan=15>Дата отгрузки, передачи (сдачи)</td>
       <td>&quot;</td>
-      <td colspan=2 class="border-bottom centered">{{shipping_date_parts[0]}}</td>
+      <td colspan=2 class="border-bottom centered"><%= l(shipping_date, format: '%d', default: nil) %></td>
       <td>&quot;</td>
-      <td colspan=6 class="border-bottom centered">{{shipping_date_parts[1]}}</td>
+      <td colspan=6 class="border-bottom centered"><%= l(shipping_date, format: '%B', default: nil) %></td>
       <td colspan=2 class="text-right">20</td>
-      <td colspan=2 class="border-bottom">{{shipping_date_parts[2]}}</td>
+      <td colspan=2 class="border-bottom"><%= l(shipping_date, format: '%y', default: nil) %></td>
       <td colspan=10>г.</td>
       <td colspan=3 class="border-right">[11]</td>
       <td>&nbsp;</td>
@@ -530,19 +416,16 @@
       <td colspan=3></td>
     </tr>
     <tr>
-      <td colspan=13 class="centered">{{ object.org_detail.manager_position }}</td>
+      <td colspan=13 class="centered"><%= invoice.org_detail&.manager_position %></td>
       <td></td>
       <td colspan=10 class="centered collapsed">
-        {% if object.org_detail.signature_manager_url and object.with_stamp and object.custom_127297 != "Нет" %}
-          <img src="{{object.org_detail.signature_manager_url}}">
-        {% endif %}
+        <% if invoice.org_detail&.signature_manager_url.present? && invoice.with_stamp %>
+          <%= image_tag invoice.org_detail&.signature_manager_url.gsub('https', 'http')  %>
+        <% end %>
       </td>
       <td></td>
       <td colspan=14 class="centered">
-        {% if object.org_detail %}
-          {% assign manager = object.org_detail.manager_name | split: " " %}
-          {{ signedName }}
-        {% endif %}
+        <%= initialize_name(invoice.org_detail&.manager_name) if invoice.org_detail %>
       </td>
       <td colspan=3 class="border-right">[13]</td>
       <td>&nbsp;</td>
@@ -579,10 +462,10 @@
     </tr>
     <tr>
       <td colspan=39 class="centered">
-        {% if invoice.org_detail && invoice.org_detail&.kpp.blank? %}
-          {{ object.org_detail.short_name }}
-          ИНН {{ object.org_detail.inn }} / {{ object.org_detail.kpp }}
-        {% endif %}
+        <% if invoice.org_detail && invoice.org_detail&.kpp.blank? %>
+          <%= invoice.org_detail.short_name %>
+          ИНН <%= invoice.org_detail.decorate.inn_kpp_line %>
+        <% end %>
       </td>
       <td colspan=3 class="border-right">[14]</td>
       <td>&nbsp;</td>
@@ -600,9 +483,9 @@
     </tr>
     <tr>
       <td colspan=13 class="text-right">М.П.
-        {% if object.org_detail.stamp_url and object.custom_127297 != "Нет" %}
-          <img src="{{object.org_detail.stamp_url}}" class="stamp">
-        {% endif %}
+        <% if invoice.org_detail&.stamp_url.present? && invoice.with_stamp %>
+          <%= image_tag invoice.org_detail&.stamp_url.gsub('https', 'http'), class: 'stamp' %>
+        <% end %>
       </td>
       <td colspan=26></td>
       <td colspan=3 class="border-right"></td>
