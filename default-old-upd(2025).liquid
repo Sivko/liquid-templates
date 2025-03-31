@@ -159,7 +159,9 @@
   <tr>
     <td colspan=16 class="padding-left">ИНН/КПП покупателя</td>
     <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">
-      {% if object.payer.kpp != blank %} {{object.payer.inn}} / {{object.payer.kpp}} {% endif %}
+      {% if object.payer.inn != blank %} {{object.payer.inn}} {% endif %}
+      {% if object.payer.inn != blank and object.payer.kpp != blank%} / {% endif %}
+      {% if object.payer.kpp != blank %} {{object.payer.kpp}} {% endif %}
     </td>
     <td colspan=3 class="centered">(6б)</td>
   </tr>

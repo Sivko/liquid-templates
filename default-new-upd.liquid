@@ -4,6 +4,9 @@
   {% assign colspan_20 = 0 %}
 {% endif %}
 
+<!-- Если вы пользуетесь коробочной версией, замените app.salesap.ru на свой домен -->
+<link href="https://app.salesap.ru/invoice_templates/style/delivery_note.css" rel="stylesheet">
+
 <table class="unbreakable">
   <tr>
     <td colspan=8 rowspan=4 class="text-top border-right" style="width: 71px;">Универсальный передаточный документ</td>
@@ -44,14 +47,14 @@
     <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">
       {% assign org = object.org_detail %}
       {% if org.juristic_zip_code %}
-        {%- if org.juristic_zip_code != blank -%}, {{org.juristic_zip_code}}{%- endif -%}
+        {%- if org.juristic_zip_code != blank -%} {{org.juristic_zip_code}}{%- endif -%}
         {%- if org.juristic_city != blank -%}, {{org.juristic_city}}{%- endif -%}
         {%- if org.juristic_street != blank -%}, {{org.juristic_street}}{%- endif -%}
         {%- if org.juristic_house != blank -%}, {{org.juristic_house}}{%- endif -%}
         {%- if org.juristic_build != blank -%}, стр. {{org.juristic_build}}{%- endif -%}
         {%- if org.juristic_office != blank -%}, {{org.juristic_office}}{%- endif -%}
       {% elsif org.work_zipcode %}
-        {%- if org.work_zipcode != blank -%}, {{org.work_zipcode}}{%- endif -%}
+        {%- if org.work_zipcode != blank -%} {{org.work_zipcode}}{%- endif -%}
         {%- if org.work_city != blank -%}, {{org.work_city}}{%- endif -%}
         {%- if org.work_street != blank -%}, {{org.work_street}}{%- endif -%}
         {%- if org.work_building != blank -%}, {{org.work_building}}{%- endif -%}
@@ -134,14 +137,30 @@
   <tr>
     <td colspan=16 class="padding-left">Адрес</td>
     <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">
-      {% if object.payer.short_name %} {{object.payer.short_name}} {% else %} {{object.payer}} {% endif %}
+      {% assign org = object.payer %}
+      {% if org.juristic_zip_code %}
+        {%- if org.juristic_zip_code != blank -%} {{org.juristic_zip_code}}{%- endif -%}
+        {%- if org.juristic_city != blank -%}, {{org.juristic_city}}{%- endif -%}
+        {%- if org.juristic_street != blank -%}, {{org.juristic_street}}{%- endif -%}
+        {%- if org.juristic_house != blank -%}, {{org.juristic_house}}{%- endif -%}
+        {%- if org.juristic_build != blank -%}, стр. {{org.juristic_build}}{%- endif -%}
+        {%- if org.juristic_office != blank -%}, {{org.juristic_office}}{%- endif -%}
+      {% elsif org.work_zipcode %}
+        {%- if org.work_zipcode != blank -%} {{org.work_zipcode}}{%- endif -%}
+        {%- if org.work_city != blank -%}, {{org.work_city}}{%- endif -%}
+        {%- if org.work_street != blank -%}, {{org.work_street}}{%- endif -%}
+        {%- if org.work_building != blank -%}, {{org.work_building}}{%- endif -%}
+        {%- if org.work_apartment != blank -%}, {{org.work_apartment}}{%- endif -%}
+      {% endif %}
     </td>
     <td colspan=3 class="centered">(6а)</td>
   </tr>
   <tr>
     <td colspan=16 class="padding-left">ИНН/КПП покупателя</td>
     <td colspan="{{ colspan_20 | plus: 60 }}" class="border-bottom">
-      {% if object.payer.kpp != blank %} {{object.payer.inn}} / {{object.payer.kpp}} {% endif %}
+      {% if object.payer.inn != blank %} {{object.payer.inn}} {% endif %}
+      {% if object.payer.inn != blank and object.payer.kpp != blank%} / {% endif %}
+      {% if object.payer.kpp != blank %} {{object.payer.kpp}} {% endif %}
     </td>
     <td colspan=3 class="centered">(6б)</td>
   </tr>
